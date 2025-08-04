@@ -3,14 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mobile Code Editor</title>
+  <title>VS Code Style Editor</title>
   <style>
     :root {
       --bg: #1e1e1e;
       --toolbar: #2c2c2c;
       --border: #444;
       --text: #fff;
-      --accent: #007acc;
     }
 
     * { box-sizing: border-box; }
@@ -19,18 +18,18 @@
       margin: 0;
       padding: 0;
       height: 100%;
-      overflow: hidden;
       background: var(--bg);
       font-family: sans-serif;
       color: var(--text);
+      overflow: hidden;
     }
 
     #top-bar, #bottom-bar {
       background: var(--toolbar);
       padding: 8px;
       display: flex;
-      gap: 8px;
       align-items: center;
+      gap: 8px;
       z-index: 2;
     }
 
@@ -143,7 +142,6 @@
       "style.css": "body { background: #f0f0f0; color: #333; }",
       "script.js": "console.log('Hello from JS');"
     };
-
     const models = {};
 
     require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' }});
@@ -204,19 +202,15 @@
         </body>
         </html>
       \`;
-
-      document.getElementById("preview").srcdoc = output;
+      document.getElementById('preview').srcdoc = output;
     }
 
-    // ✅ Drag Resize Logic
     const resizer = document.getElementById('resizer');
     const editorDiv = document.getElementById('editor');
     const outputDiv = document.getElementById('output');
     const topBar = document.getElementById('top-bar');
-    const bottomBar = document.getElementById('bottom-bar');
 
     let isDragging = false;
-
     const isHorizontal = () => window.innerWidth >= 768;
 
     function startResize(e) {
