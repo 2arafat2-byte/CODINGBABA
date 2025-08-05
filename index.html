@@ -1,253 +1,302 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VS Code Style Editor</title>
-  <style>
-    :root {
-      --bg: #1e1e1e;
-      --toolbar: #2c2c2c;
-      --border: #444;
-      --text: #fff;
-    }
+<!DOCTYPE html>  <html lang="en">  
+<head>  
+  <meta charset="UTF-8" />  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">  
+  <title>Code Editor with Libraries</title>  
+  <style>  
+    html, body {  
+      margin: 0; padding: 0; height: 100%;  
+      font-family: sans-serif; background: #1e1e1e; color: white;  
+      overflow: hidden;  
+    }  
+    #app {  
+      display: flex;  
+      height: 100%;  
+      width: 100%;  
+    }  
+    #sidebar {  
+      width: 220px;  
+      background: #2c2c2c;  
+      padding: 10px;  
+      box-sizing: border-box;  
+      overflow-y: auto;  
+      transition: transform 0.3s ease;  
+    }  
+    #sidebar.hidden {  
+      transform: translateX(-220px);  
+    }  
+    #toggleSidebar {  
+      background: #0a84ff;  
+      border: none;  
+      color: white;  
+      padding: 5px;  
+      cursor: pointer;  
+      width: 100%;  
+      margin-bottom: 5px;  
+    }  
+    #main {  
+      flex: 1;  
+      display: flex;  
+      flex-direction: column;  
+    }  
+    #tabs {  
+      display: flex;  
+      background: #333;  
+    }  
+    .tab {  
+      flex: 1;  
+      padding: 10px;  
+      cursor: pointer;  
+      background: #444;  
+      border: none;  
+      color: white;  
+    }  
+    .tab.active {  
+      background: #0a84ff;  
+    }  
+    #editor {  
+      flex: 1;  
+      min-height: 200px;  
+    }  
+    #consolePanel {  
+      background: black;  
+      color: lime;  
+      font-family: monospace;  
+      font-size: 14px;  
+      overflow-y: auto;  
+      max-height: 120px;  
+      display: none;  
+    }  
+    #output {  
+      height: 40%;  
+    }  
+    iframe {  
+      width: 100%;  
+      height: 100%;  
+      border: none;  
+    }  
+    button {  
+      margin: 5px 0;  
+      width: 100%;  
+      padding: 5px;  
+      background: #444;  
+      border: none;  
+      color: white;  
+      cursor: pointer;  
+    }  
+    button:hover {  
+      background: #555;  
+    }  
+    @media(max-width:600px){  
+      #sidebar{  
+        position:absolute;  
+        z-index:10;  
+        height:100%;  
+      }  
+    }  
+  </style>  
+</head>  
+<body>  
+  <div id="app">  
+    <div id="sidebar" class="hidden">  
+      <button id="toggleSidebar">☰ Menu</button>  
+      <strong>📦 Libraries</strong><br>  
+      <button onclick="insertCDN('tailwind')">Tailwind</button>  
+      <button onclick="insertCDN('bootstrap')">Bootstrap</button>  
+      <button onclick="insertCDN('fontawesome')">Font Awesome</button>  
+      <button onclick="insertCDN('alpine')">Alpine.js</button>  
+      <button onclick="insertCDN('googlefonts')">Google Fonts</button>  
+      <button onclick="insertCDN('animate')">Animate.css</button>  
+      <button onclick="insertCDN('jquery')">jQuery</button>  
+      <button onclick="insertCDN('gsap')">GSAP</button>  
+      <button onclick="insertCDN('chart')">Chart.js</button>  
+      <button onclick="insertCDN('bootstrapicons')">Bootstrap Icons</button>  
+      <hr>  
+      <strong>⚙️ Utilities</strong><br>  
+      <button onclick="fontSize('+')">A+</button>  
+      <button onclick="fontSize('-')">A-</button>  
+      <button onclick="toggleFind()">Find 🔍</button>  
+      <button onclick="toggleLock()">Lock 🔒</button>  
+      <button onclick="toggleConsole()">Console 🧪</button>  
+      <button onclick="downloadZIP()">Download ZIP 💾</button>  
+      <hr>  
+      <strong>📋 Templates</strong><br>  
+      <button onclick="insertTemplate('html')">HTML Boilerplate</button>  
+      <button onclick="insertTemplate('css')">CSS Reset</button>  
+      <button onclick="insertTemplate('js')">JS Logger</button>  
+    </div>  
+    <div id="main">  
+      <div id="tabs">  
+        <button class="tab active" data-file="index.html">index.html</button>  
+        <button class="tab" data-file="style.css">style.css</button>  
+        <button class="tab" data-file="script.js">script.js</button>  
+        <button id="toggleSidebarMobile" style="flex:0;width:50px;">☰</button>  
+      </div>  
+      <div id="editor"></div>  
+      <div id="consolePanel"></div>  
+      <div id="output">  
+        <iframe id="preview"></iframe>  
+      </div>  
+    </div>  
+  </div>    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>  <script>  
+    let editor;  
+    let currentFile = "index.html";  
+    let isLocked = false;  
+    let fontSizeVal = 14;  
+  
+    const defaultCodes = {  
+      "index.html": `<!DOCTYPE html>  
+<html>  
+<head>  
+  <meta charset=\"UTF-8\">  
+  <title>My Page</title>  
+</head>  
+<body>  
+  <h1>Hello World</h1>  
+</body>  
+</html>`,  
+      "style.css": `body {  
+  background: #f0f0f0;  
+  color: #333;  
+}`,  
+      "script.js": `console.log('Hello from JS');`  
+    };  
+  
+    require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' }});  
+    require(['vs/editor/editor.main'], function () {  
+      editor = monaco.editor.create(document.getElementById('editor'), {  
+        value: defaultCodes["index.html"],  
+        language: 'html',  
+        theme: 'vs-dark',  
+        fontSize: fontSizeVal,  
+        automaticLayout: true  
+      });  
+  
+      document.querySelectorAll('.tab').forEach(tab => {  
+        tab.addEventListener('click', () => {  
+          document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));  
+          tab.classList.add('active');  
+          switchFile(tab.dataset.file);  
+        });  
+      });  
+  
+      editor.onDidChangeModelContent(() => {  
+        if (!isLocked) {  
+          localStorage.setItem(currentFile, editor.getValue());  
+          updateOutput();  
+        }  
+      });  
+  
+      updateOutput();  
+    });  
+  
+    function switchFile(file) {  
+      currentFile = file;  
+      const saved = localStorage.getItem(file);  
+      editor.setValue(saved || defaultCodes[file]);  
+      monaco.editor.setModelLanguage(editor.getModel(), getLang(file));  
+    }  
+  
+    function getLang(f) {  
+      if (f.endsWith('.js')) return 'javascript';  
+      if (f.endsWith('.css')) return 'css';  
+      return 'html';  
+    }  
+  
+    function fontSize(dir) {  
+      fontSizeVal += dir === '+' ? 1 : -1;  
+      editor.updateOptions({ fontSize: fontSizeVal });  
+    }  
+  
+    function toggleFind() {  
+      editor.getAction('actions.find').run();  
+    }  
+  
+    function toggleLock() {  
+      isLocked = !isLocked;  
+      alert(isLocked ? '🔒 File Locked!' : '✅ File Editable');  
+      editor.updateOptions({ readOnly: isLocked });  
+    }  
+  
+    function toggleConsole() {  
+      const panel = document.getElementById('consolePanel');  
+      panel.style.display = panel.style.display === 'block' ? 'none' : 'block';  
+    }  
+  
+    function insertTemplate(type) {  
+      let tpl = '';  
+      if (type === 'html') tpl = `<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <title>Title</title>\n</head>\n<body>\n\n</body>\n</html>`;  
+      if (type === 'css') tpl = `* { margin: 0; padding: 0; box-sizing: border-box; }`;  
+      if (type === 'js') tpl = `console.log('Logging...');`;  
+      editor.setValue(tpl);  
+    }  
+  
+    function insertCDN(lib) {  
+      let tag = '';  
+      switch (lib) {  
+        case 'tailwind':  
+          tag = `<script src=\"https://cdn.tailwindcss.com\"></script>`; break;  case 'bootstrap':  
+      tag = `<link href=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css\" rel=\"stylesheet\">\n<script src=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js\"></script>`; break;  
+    case 'fontawesome':  
+      tag = `<link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css\">`; break;  
+    case 'alpine':  
+      tag = `<script src=\"https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js\" defer></script>`; break;  
+    case 'googlefonts':  
+      tag = `<link href=\"https://fonts.googleapis.com/css2?family=Roboto&display=swap\" rel=\"stylesheet\">`; break;  
+    case 'animate':  
+      tag = `<link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css\">`; break;  
+    case 'jquery':  
+      tag = `<script src=\"https://code.jquery.com/jquery-3.7.1.min.js\"></script>`; break;  
+    case 'gsap':  
+      tag = `<script src=\"https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/gsap.min.js\"></script>`; break;  
+    case 'chart':  
+      tag = `<script src=\"https://cdn.jsdelivr.net/npm/chart.js\"></script>`; break;  
+    case 'bootstrapicons':  
+      tag = `<link href=\"https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css\" rel=\"stylesheet\">`; break;  
+  }  
 
-    * { box-sizing: border-box; }
+  let html = localStorage.getItem('index.html') || defaultCodes['index.html'];  
+  if (!html.includes(tag)) {  
+    html = html.replace('</head>', `${tag}\n</head>`);  
+    localStorage.setItem('index.html', html);  
+    if (currentFile === 'index.html') editor.setValue(html);  
+    updateOutput();  
+  } else {  
+    alert('Library already added!');  
+  }  
+}  
 
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      background: var(--bg);
-      font-family: sans-serif;
-      color: var(--text);
-      overflow: hidden;
-    }
+function updateOutput() {  
+  const html = localStorage.getItem('index.html') || defaultCodes['index.html'];  
+  const css = localStorage.getItem('style.css') || defaultCodes['style.css'];  
+  const js = localStorage.getItem('script.js') || defaultCodes['script.js'];  
 
-    #top-bar, #bottom-bar {
-      background: var(--toolbar);
-      padding: 8px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      z-index: 2;
-    }
+  const output = html  
+    .replace('</head>', `<style>${css}</style></head>`)  
+    .replace('</body>', `<script>\ntry { ${js} } catch(e) { parent.document.getElementById('consolePanel').innerText += e.message + \"\\n\"; }\n</script></body>`);  
 
-    #top-bar {
-      border-bottom: 1px solid var(--border);
-    }
+  document.getElementById('preview').srcdoc = output;  
+}  
 
-    #bottom-bar {
-      border-top: 1px solid var(--border);
-      justify-content: center;
-    }
+async function downloadZIP() {  
+  const zip = new JSZip();  
+  zip.file('index.html', localStorage.getItem('index.html') || defaultCodes['index.html']);  
+  zip.file('style.css', localStorage.getItem('style.css') || defaultCodes['style.css']);  
+  zip.file('script.js', localStorage.getItem('script.js') || defaultCodes['script.js']);  
+  const blob = await zip.generateAsync({ type: 'blob' });  
+  const a = document.createElement('a');  
+  a.href = URL.createObjectURL(blob);  
+  a.download = 'project.zip';  
+  a.click();  
+}  
 
-    #fileSelect, button {
-      background: var(--bg);
-      color: var(--text);
-      border: 1px solid var(--border);
-      padding: 6px 12px;
-      font-size: 14px;
-      border-radius: 4px;
-    }
+document.getElementById('toggleSidebar').addEventListener('click', () => {  
+  document.getElementById('sidebar').classList.toggle('hidden');  
+});  
+document.getElementById('toggleSidebarMobile').addEventListener('click', () => {  
+  document.getElementById('sidebar').classList.toggle('hidden');  
+});
 
-    #main-container {
-      display: flex;
-      flex-direction: column;
-      height: calc(100% - 110px);
-      width: 100%;
-    }
-
-    #editor, #output {
-      flex: 1;
-      overflow: hidden;
-    }
-
-    #resizer {
-      height: 14px;
-      background: #555;
-      cursor: row-resize;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      touch-action: none;
-    }
-
-    #resizer div {
-      width: 40px;
-      height: 5px;
-      background: #aaa;
-      border-radius: 3px;
-    }
-
-    iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-      background: black;
-    }
-
-    @media (min-width: 768px) {
-      #main-container {
-        flex-direction: row;
-      }
-
-      #editor, #output {
-        width: 50%;
-        height: 100%;
-      }
-
-      #resizer {
-        width: 14px;
-        height: 100%;
-        cursor: col-resize;
-        flex-direction: column;
-      }
-
-      #resizer div {
-        width: 5px;
-        height: 40px;
-      }
-    }
-  </style>
-</head>
-<body>
-
-  <div id="top-bar">
-    <select id="fileSelect">
-      <option value="index.html">index.html</option>
-      <option value="style.css">style.css</option>
-      <option value="script.js">script.js</option>
-    </select>
-  </div>
-
-  <div id="main-container">
-    <div id="editor"></div>
-    <div id="resizer"><div></div></div>
-    <div id="output"><iframe id="preview"></iframe></div>
-  </div>
-
-  <div id="bottom-bar">
-    <button onclick="saveCode()">💾 Save</button>
-    <button onclick="loadCode()">📂 Load</button>
-    <button onclick="updateOutput()">▶️ Run</button>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
-  <script>
-    let editor;
-    let currentFile = "index.html";
-    const defaultCodes = {
-      "index.html": "<!DOCTYPE html>\\n<html>\\n<head><title>Preview</title></head>\\n<body>\\n<h1>Hello!</h1>\\n</body>\\n</html>",
-      "style.css": "body { background: #f0f0f0; color: #333; }",
-      "script.js": "console.log('Hello from JS');"
-    };
-    const models = {};
-
-    require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' }});
-    require(['vs/editor/editor.main'], function () {
-      for (let file in defaultCodes) {
-        models[file] = monaco.editor.createModel(
-          localStorage.getItem(file) || defaultCodes[file],
-          getLanguage(file)
-        );
-      }
-
-      editor = monaco.editor.create(document.getElementById('editor'), {
-        model: models[currentFile],
-        theme: 'vs-dark',
-        fontSize: 14,
-        automaticLayout: true
-      });
-
-      document.getElementById('fileSelect').addEventListener('change', (e) => {
-        currentFile = e.target.value;
-        editor.setModel(models[currentFile]);
-      });
-    });
-
-    function saveCode() {
-      for (let file in models) {
-        localStorage.setItem(file, models[file].getValue());
-      }
-      alert("Code saved!");
-    }
-
-    function loadCode() {
-      for (let file in models) {
-        const saved = localStorage.getItem(file);
-        if (saved) models[file].setValue(saved);
-      }
-      editor.setModel(models[currentFile]);
-    }
-
-    function getLanguage(file) {
-      if (file.endsWith('.js')) return 'javascript';
-      if (file.endsWith('.html')) return 'html';
-      if (file.endsWith('.css')) return 'css';
-      return 'plaintext';
-    }
-
-    function updateOutput() {
-      const html = models["index.html"].getValue();
-      const css = models["style.css"].getValue();
-      const js = models["script.js"].getValue();
-
-      const output = \`
-        <html>
-        <head><style>\${css}</style></head>
-        <body>
-          \${html}
-          <script>\${js}<\\/script>
-        </body>
-        </html>
-      \`;
-      document.getElementById('preview').srcdoc = output;
-    }
-
-    const resizer = document.getElementById('resizer');
-    const editorDiv = document.getElementById('editor');
-    const outputDiv = document.getElementById('output');
-    const topBar = document.getElementById('top-bar');
-
-    let isDragging = false;
-    const isHorizontal = () => window.innerWidth >= 768;
-
-    function startResize(e) {
-      isDragging = true;
-      e.preventDefault();
-      document.addEventListener('mousemove', resize);
-      document.addEventListener('mouseup', stopResize);
-      document.addEventListener('touchmove', resize, { passive: false });
-      document.addEventListener('touchend', stopResize);
-    }
-
-    function resize(e) {
-      if (!isDragging) return;
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-      if (isHorizontal()) {
-        const width = Math.max(100, clientX);
-        editorDiv.style.width = \`\${width}px\`;
-        outputDiv.style.width = \`calc(100% - \${width}px - 14px)\`;
-      } else {
-        const height = Math.max(80, clientY - topBar.offsetHeight);
-        editorDiv.style.height = \`\${height}px\`;
-        outputDiv.style.height = \`calc(100% - \${height}px - 14px)\`;
-      }
-    }
-
-    function stopResize() {
-      isDragging = false;
-      document.removeEventListener('mousemove', resize);
-      document.removeEventListener('mouseup', stopResize);
-      document.removeEventListener('touchmove', resize);
-      document.removeEventListener('touchend', stopResize);
-    }
-
-    resizer.addEventListener('mousedown', startResize);
-    resizer.addEventListener('touchstart', startResize);
-  </script>
-</body>
-</html>
+  </script>  
+</body>  
+</html> 
